@@ -1,101 +1,179 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Symptoms } from './components/Symptoms'
+import { EyeSelection } from './components/EyeSelection'
+import { OcularHistory } from './components/OcularHistory'
+import { MedicalConditions } from './components/MedicalConditions'
+import { ImageUpload } from './components/ImageUpload'
+import { DiagnosisResult } from './components/DiagnosisResult'
+import { AlertCircle } from 'lucide-react'
+import { DiagnosisLoading } from './components/DiagnosisLoading'
+
+export default function EyeCareApp() {
+  const [step, setStep] = useState(0)
+  const [selectedSymptoms, setSelectedSymptoms] = useState([])
+  const [selectedEye, setSelectedEye] = useState('')
+  const [ocularHistory, setOcularHistory] = useState([])
+  const [customHistory, setCustomHistory] = useState('')
+  const [medicalConditions, setMedicalConditions] = useState([])
+  const [customCondition, setCustomCondition] = useState('')
+  const [uploadedImage, setUploadedImage] = useState(null)
+  const [isGeneratingDiagnosis, setIsGeneratingDiagnosis] = useState(false)
+  const [showWarning, setShowWarning] = useState(false)
+  const [diagnosisResult, setDiagnosisResult] = useState('')
+
+  const handleProceed = async () => {
+    if (step === 1 && !selectedEye) {
+      setShowWarning(true)
+      return
+    }
+
+    if (step === 4 && !uploadedImage) {
+      setShowWarning(true)
+      return
+    }
+
+    setShowWarning(false)
+
+    if (step === 4) {
+      setIsGeneratingDiagnosis(true)
+      try {
+        const fullOcularHistory = ocularHistory.includes('Others') 
+          ? [...ocularHistory.filter(h => h !== 'Others'), customHistory] 
+          : ocularHistory
+
+        const fullMedicalConditions = medicalConditions.includes('Others')
+          ? [...medicalConditions.filter(c => c !== 'Others'), customCondition]
+          : medicalConditions
+
+        const diagnosisResponse = await fetch('/api/generate-diagnosis', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            symptoms: selectedSymptoms,
+            affectedEye: selectedEye,
+            ocularHistory: fullOcularHistory,
+            medicalConditions: fullMedicalConditions,
+            imageUrl: uploadedImage,
+          }),
+        })
+
+        if (!diagnosisResponse.ok) {
+          throw new Error('Failed to generate diagnosis')
+        }
+
+        const diagnosisData = await diagnosisResponse.json()
+        setDiagnosisResult(diagnosisData.diagnosis)
+      } catch (error) {
+        console.error("Error generating diagnosis:", error)
+        setDiagnosisResult("An error occurred while generating the diagnosis. Please try again.")
+      } finally {
+        setIsGeneratingDiagnosis(false)
+      }
+    }
+    setStep(step + 1)
+  }
+
+  const handleBack = () => {
+    setStep(step - 1)
+    setShowWarning(false)
+  }
+
+  const handleRestart = () => {
+    setStep(0)
+    setSelectedSymptoms([])
+    setSelectedEye('')
+    setOcularHistory([])
+    setCustomHistory('')
+    setMedicalConditions([])
+    setCustomCondition('')
+    setUploadedImage(null)
+    setShowWarning(false)
+    setDiagnosisResult('')
+  }
+
+  const steps = [
+    <Symptoms key="symptoms" selectedSymptoms={selectedSymptoms} setSelectedSymptoms={setSelectedSymptoms} />,
+    <EyeSelection key="eye-selection" selectedEye={selectedEye} setSelectedEye={setSelectedEye} />,
+    <OcularHistory key="ocular-history" ocularHistory={ocularHistory} setOcularHistory={setOcularHistory} customHistory={customHistory} setCustomHistory={setCustomHistory} />,
+    <MedicalConditions
+      key="medical-conditions"
+      medicalConditions={medicalConditions}
+      setMedicalConditions={setMedicalConditions}
+      customCondition={customCondition}
+      setCustomCondition={setCustomCondition}
+    />,
+    <ImageUpload key="image-upload" selectedEye={selectedEye} setUploadedImage={setUploadedImage} />,
+    <DiagnosisResult 
+      key="diagnosis-result" 
+      diagnosis={diagnosisResult} 
+      uploadedImage={uploadedImage} 
+      isLoading={isGeneratingDiagnosis}
+      onRegenerate={handleRestart}
+      onBack={handleBack}
+    />,
+  ]
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-2xl"
+      >
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-blue-800">Eye Care Diagnostic Tool</h1>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3 }}
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            {steps[step]}
+          </motion.div>
+        </AnimatePresence>
+        {showWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-md flex items-center"
           >
-            Read our docs
-          </a>
+            <AlertCircle className="mr-2" />
+            {step === 1 ? "Please select an affected eye before proceeding." : "Please upload an image before generating the diagnosis."}
+          </motion.div>
+        )}
+        {isGeneratingDiagnosis && <DiagnosisLoading />}
+        <div className="flex flex-col sm:flex-row justify-between mt-6 sm:mt-8 gap-4">
+          {step > 0 && step < steps.length - 1 && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleBack}
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-full hover:bg-gray-300 transition duration-300"
+            >
+              Back
+            </motion.button>
+          )}
+          {step < steps.length - 1 && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleProceed}
+              className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-300 ml-auto"
+              disabled={isGeneratingDiagnosis}
+            >
+              {step === 4 ? (isGeneratingDiagnosis ? 'Generating...' : 'Generate Diagnosis') : 
+ 'Next'}
+            </motion.button>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </motion.div>
     </div>
-  );
+  )
 }
