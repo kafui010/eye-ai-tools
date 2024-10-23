@@ -1,7 +1,9 @@
+'use client'
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, X } from 'lucide-react'
-import { debounce } from 'lodash'
+import debounce from 'lodash/debounce'
 
 const predefinedSymptoms = [
   { id: 'redness', emoji: '🔴', label: 'Redness' },
@@ -42,8 +44,8 @@ const fetchSymptomSuggestions = async (query: string) => {
 }
 
 interface SymptomsProps {
-  selectedSymptoms: string[];
-  setSelectedSymptoms: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedSymptoms: string[]
+  setSelectedSymptoms: React.Dispatch<React.SetStateAction<string[]>>
 }
 
 export function Symptoms({ selectedSymptoms, setSelectedSymptoms }: SymptomsProps) {

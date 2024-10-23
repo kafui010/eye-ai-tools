@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const API_KEY =   process.env.GEMINI_API_KEY
+const API_KEY = process.env.GEMINI_API_KEY
 
 if (!API_KEY) {
   throw new Error("Missing Gemini API Key")
@@ -13,15 +13,13 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, diagnosis } = await req.json()
 
-    const modael = genAI.getGenerativeModel({ model: "gemini-1.5-pro" })
-
-    const chatHistory = messages.slice(0, -1).map(msg => ({
-      role: msg.role,
-      parts: msg.content,
-    }))
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" })
 
     const chat = model.startChat({
-      history: chatHistory,
+      history: messages.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.content }],
+      })),
       generationConfig: {
         maxOutputTokens: 1000,
       },

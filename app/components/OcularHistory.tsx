@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { debounce } from 'lodash';
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
+import debounce from 'lodash/debounce'
 
 // Simulated predefined ocular history options
 const predefinedOcularHistory = [
@@ -11,11 +13,11 @@ const predefinedOcularHistory = [
   { id: 'cataract', emoji: '🌫️', label: 'Cataract' },
   { id: 'lasik', emoji: '🔬', label: 'LASIK' },
   { id: 'others', emoji: '🔍', label: 'Others' },
-];
+]
 
 // Simulated API call for ocular health suggestions
 const fetchOcularSuggestions = async (query) => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300)) // Simulate network delay
   const allPossibleOcularIssues = [
     "Dry Eyes", "Eye Strain", "Floaters", "Glaucoma", "Cataract", 
     "Retinal Detachment", "Macular Degeneration", "Uveitis", 
@@ -27,64 +29,64 @@ const fetchOcularSuggestions = async (query) => {
     "Eye Twitch", "Vision Loss", "Ocular Hypertension", 
     "Retinitis Pigmentosa", "Chemical Burn", "Eye Tumor",
     "Chronic Dry Eye"
-  ];
+  ]
   return allPossibleOcularIssues.filter(issue => 
     issue.toLowerCase().includes(query.toLowerCase())
-  );
-};
+  )
+}
 
 export function OcularHistory({ ocularHistory, setOcularHistory }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSearch, setShowSearch] = useState(false);
-  const searchInputRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [showSearch, setShowSearch] = useState(false)
+  const searchInputRef = useRef(null)
 
   const debouncedFetchSuggestions = useCallback(
     debounce(async (query) => {
       if (query.length > 0) {
-        const fetchedSuggestions = await fetchOcularSuggestions(query);
-        setSuggestions(fetchedSuggestions);
+        const fetchedSuggestions = await fetchOcularSuggestions(query)
+        setSuggestions(fetchedSuggestions)
       } else {
-        setSuggestions([]);
+        setSuggestions([])
       }
     }, 300),
     []
-  );
+  )
 
   const toggleOcularHistory = (historyId) => {
     if (historyId === 'others') {
-      setShowSearch(true);
-      return;
+      setShowSearch(true)
+      return
     }
     setOcularHistory((prev) => {
       if (prev.includes(historyId)) {
-        return prev.filter((h) => h !== historyId);
+        return prev.filter((h) => h !== historyId)
       } else {
-        return [...prev, historyId];
+        return [...prev, historyId]
       }
-    });
-  };
+    })
+  }
 
   const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    debouncedFetchSuggestions(value);
-  };
+    const value = e.target.value
+    setSearchTerm(value)
+    debouncedFetchSuggestions(value)
+  }
 
   const addCustomHistory = (history) => {
     if (history && !ocularHistory.includes(history)) {
-      setOcularHistory((prev) => [...prev, history]);
+      setOcularHistory((prev) => [...prev, history])
     }
-    setSearchTerm('');
-    setSuggestions([]);
-    setShowSearch(false);
-  };
+    setSearchTerm('')
+    setSuggestions([])
+    setShowSearch(false)
+  }
 
   useEffect(() => {
     if (showSearch) {
-      searchInputRef.current?.focus();
+      searchInputRef.current?.focus()
     }
-  }, [showSearch]);
+  }, [showSearch])
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -161,7 +163,8 @@ export function OcularHistory({ ocularHistory, setOcularHistory }) {
             <span className="font-medium">{customHistory}</span>
           </motion.button>
         ))}
+      
       </div>
     </div>
-  );
+  )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, RefreshCw, Eye, MessageSquare, Send, CheckCircle } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Eye, MessageSquare, Send, CheckCircle, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
   const [chatMessages, setChatMessages] = useState([])
   const [userInput, setUserInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [error, setError] = useState(null)
   const chatEndRef = useRef(null)
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
     setChatMessages(prevMessages => [...prevMessages, newMessage])
     setUserInput('')
     setIsTyping(true)
+    setError(null)
 
     try {
       const response = await fetch('/api/chat', {
@@ -47,7 +49,7 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
       setChatMessages(prevMessages => [...prevMessages, { role: 'assistant', content: data.response }])
     } catch (error) {
       console.error('Error sending message:', error)
-      setChatMessages(prevMessages => [...prevMessages, { role: 'assistant', content: "I'm sorry, I'm having trouble responding right now. Please try again later." }])
+      setError("I'm sorry, I'm having trouble responding right now. Please try again later. 😔")
     } finally {
       setIsTyping(false)
     }
@@ -219,8 +221,17 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-lg p-6 max-w-2xl w-full h-[80vh] flex flex-col"
             >
-              <h3 className="text-2xl font-bold mb-4 text-blue-800">Chat with AI Assistant</h3>
+              <h3 className="text-2xl font-bold mb-4 text-blue-800">Chat with AI Eye Health Assistant</h3>
+              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+                <p className="font-bold">Caution</p>
+                <p>AI may make mistakes. Please use with discretion and consult a healthcare professional for medical advice.</p>
+              </div>
               <div className="flex-grow overflow-y-auto mb-4 space-y-4 p-4 bg-gray-100 rounded-lg">
+                {chatMessages.length === 0 && (
+                  <div className="text-center text-gray-500">
+                    <p>👋 Hello! I'm your AI eye health assistant. While I can't offer medical advice or diagnoses, I'm here to provide general information about eye health. How can I help you today? 😊</p>
+                  </div>
+                )}
                 {chatMessages.map((message, index) => (
                   <div
                     key={index}
@@ -235,7 +246,12 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
                 ))}
                 {isTyping && (
                   <div className="bg-white p-3 rounded-lg max-w-[80%] shadow">
-                    <p className="text-gray-500">AI is typing...</p>
+                    <p className="text-gray-500">AI is typing... 🤔</p>
+                  </div>
+                )}
+                {error && (
+                  <div className="bg-red-100 p-3 rounded-lg max-w-[80%] shadow">
+                    <p className="text-red-500">{error}</p>
                   </div>
                 )}
                 <div ref={chatEndRef} />
