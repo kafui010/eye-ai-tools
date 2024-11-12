@@ -2,23 +2,26 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, RefreshCw, Eye, MessageSquare, Send, CheckCircle, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, RefreshCw, MessageSquare, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
 export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegenerate, onBack }) {
-  const [showViewBreakdown, setShowViewBreakdown] = useState(false)
   const [showChatInterface, setShowChatInterface] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
   const [userInput, setUserInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [error, setError] = useState(null)
   const chatEndRef = useRef(null)
+  const chatHeaderRef = useRef(null)
 
+  // Scroll to the end of chat messages when they are updated
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatMessages])
+    if (showChatInterface && chatMessages.length > 0) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [chatMessages, showChatInterface])
 
   const handleSendMessage = async () => {
     if (!userInput.trim()) return
@@ -55,6 +58,22 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
     }
   }
 
+  const handleChatToggle = () => {
+    setShowChatInterface(true)
+    setTimeout(() => {
+      chatHeaderRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 10);
+  }
+
+  const handleCloseChat = () => {
+    setShowChatInterface(false)
+  }
+
+  const handleRegenerate = () => {
+    setChatMessages([]) // Clear messages on regeneration
+    onRegenerate()
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -70,32 +89,13 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
     if (!text) return <p className="text-red-500 text-lg font-medium">No diagnosis available. Please try again.</p>
 
     const sections = text.split('\n\n')
-    return sections.map((section, index) => {
-      if (section.startsWith('Symptom Interpretation:') || section.startsWith('Recommendations:')) {
-        const [title, ...content] = section.split('\n')
-        return (
-          <div key={index} className="mb-8">
-            <h3 className="text-2xl font-bold text-blue-800 mb-4 flex items-center">
-              <CheckCircle className="mr-2 text-blue-500" size={24} />
-              {title}
-            </h3>
-            <ul className="space-y-3">
-              {content.map((line, i) => (
-                <li key={i} className="flex items-start">
-                  <span className="text-blue-500 mr-2">•</span>
-                  <span className="text-gray-700 text-lg leading-relaxed">{line}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )
-      }
-      return <p key={index} className="text-gray-700 mb-6 text-lg leading-relaxed">{section}</p>
-    })
+    return sections.map((section, index) => (
+      <p key={index} className="text-gray-700 mb-6 text-lg leading-relaxed">{section}</p>
+    ))
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
       <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-blue-800 text-center">Your Personalized Eye Health Analysis</h2>
       <Card className="mb-8 overflow-hidden shadow-lg">
         <CardContent className="p-0">
@@ -117,22 +117,6 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
               <div className="prose max-w-none">
                 {diagnosis ? formatDiagnosis(diagnosis) : <p className="text-red-500 text-lg font-medium">No diagnosis available. Please try again.</p>}
               </div>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Button
-                  onClick={() => setShowViewBreakdown(true)}
-                  className="flex items-center justify-center text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-                >
-                  <Eye className="mr-2" size={24} />
-                  View Detailed Analysis
-                </Button>
-                <Button
-                  onClick={() => setShowChatInterface(true)}
-                  className="flex items-center justify-center text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-                >
-                  <MessageSquare className="mr-2" size={24} />
-                  Chat with AI Assistant
-                </Button>
-              </div>
             </div>
           </div>
         </CardContent>
@@ -140,7 +124,9 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
       <div className="text-center text-sm text-gray-500 mb-8">
         AI-generated insights to support your eye health journey. For personalized medical advice, please consult with an eye care professional.
       </div>
-      <div className="flex flex-col sm:flex-row justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+
+      {/* Vertical Button Layout */}
+      <div className="flex flex-col space-y-4 mb-20">
         <Button
           variant="outline"
           onClick={onBack}
@@ -149,135 +135,97 @@ export function DiagnosisResult({ diagnosis, uploadedImage, isLoading, onRegener
           <ArrowLeft className="mr-2" size={20} />
           Back
         </Button>
+
         <Button
-          onClick={onRegenerate}
-          className="flex items-center justify-center text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
+          onClick={handleChatToggle}
+          className="flex items-center justify-center text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 transition duration-300"
+        >
+          <MessageSquare className="mr-2" size={24} />
+          Chat with AI Assistant
+        </Button>
+
+        <Button
+          onClick={handleRegenerate}
+          className="flex items-center justify-center text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 transition duration-300"
         >
           <RefreshCw className="mr-2" size={20} />
           Regenerate Analysis
         </Button>
       </div>
+
       <AnimatePresence>
-        {showViewBreakdown && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 sm:p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-            >
-              <h3 className="text-3xl font-bold mb-6 text-blue-800">Your Eye Health Journey</h3>
-              <div className="space-y-6 text-lg leading-relaxed">
-                <section>
-                  <h4 className="text-2xl font-semibold mb-3 text-blue-700">Understanding Your Eyes</h4>
-                  <p className="text-gray-700">Your eyes are remarkable organs, working tirelessly to help you perceive the world. They're composed of intricate parts like the cornea, iris, lens, and retina, each playing a crucial role in your vision.</p>
-                </section>
-                
-                <section>
-                  <h4 className="text-2xl font-semibold mb-3 text-blue-700">Decoding Your Symptoms</h4>
-                  <p className="text-gray-700">The symptoms you've shared provide valuable clues about your eye health. Remember, early awareness and action are key to maintaining healthy vision and preventing potential issues from progressing.</p>
-                </section>
-                
-                <section>
-                  <h4 className="text-2xl font-semibold mb-3 text-blue-700">Lifestyle for Healthy Eyes</h4>
-                  <p className="text-gray-700">Your daily habits can significantly impact your eye health. Consider these friendly tips:</p>
-                  <ul className="list-disc pl-6 mt-2 text-gray-700">
-                    <li>Nourish your eyes with a diet rich in vitamins A, C, and E</li>
-                    <li>Stay hydrated and ensure you're getting enough restful sleep</li>
-                    <li>Give your eyes regular breaks when using digital devices (try the 20-20-20 rule)</li>
-                    <li>Shield your eyes from harmful UV rays with quality sunglasses</li>
-                  </ul>
-                </section>
-                
-                <section>
-                  <h4 className="text-2xl font-semibold mb-3 text-blue-700">Your Next Steps</h4>
-                  <p className="text-gray-700">While this analysis provides valuable insights, partnering with an eye care professional for a comprehensive examination is your best next step. They can offer personalized advice and treatment options tailored just for you, ensuring your vision stays clear and healthy for years to come.</p>
-                </section>
-              </div>
-              <Button 
-                onClick={() => setShowViewBreakdown(false)} 
-                className="mt-6 text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-              >
-                Close
-              </Button>
-            </motion.div>
-          </motion.div>
-        )}
         {showChatInterface && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 overflow-hidden backdrop-blur-md"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-2xl w-full h-[80vh] flex flex-col"
+              initial={{ scale: 0.9, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 50 }}
+              className="bg-white rounded-lg shadow-2xl w-full h-screen max-w-2xl flex flex-col relative"
             >
-              <h3 className="text-2xl font-bold mb-4 text-blue-800">Chat with AI Eye Health Assistant</h3>
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-                <p className="font-bold">Caution</p>
-                <p>AI may make mistakes. Please use with discretion and consult a healthcare professional for medical advice.</p>
+              <div ref={chatHeaderRef} className="p-4 sm:p-6 flex-grow overflow-hidden">
+                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                  <h3 className="text-2xl font-bold text-blue-800">AI Eye Health Assistant</h3>
+                </div>
+                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+                  <p className="font-bold">Caution</p>
+                  <p>AI may make mistakes. Please use with discretion and consult a healthcare professional for medical advice.</p>
+                </div>
+                <div className="space-y-4 mb-4 overflow-y-auto h-[calc(100vh-300px)]"> {/* Keep chat area height fixed */}
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 rounded-lg ${
+                        message.role === 'user' ? 'bg-blue-200 ml-auto' : 'bg-gray-100'
+                      } max-w-[80%] shadow-md`}
+                    >
+                      <p className={`text-lg ${message.role === 'user' ? 'text-blue-800' : 'text-gray-800'}`}>
+                        {message.content}
+                      </p>
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div className="bg-gray-100 p-3 rounded-lg max-w-[80%] shadow-md">
+                      <p className="text-gray-500">AI is typing... 🤔</p>
+                    </div>
+                  )}
+                  {error && (
+                    <div className="bg-red-100 p-3 rounded-lg max-w-[80%] shadow-md">
+                      <p className="text-red-500">{error}</p>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
               </div>
-              <div className="flex-grow overflow-y-auto mb-4 space-y-4 p-4 bg-gray-100 rounded-lg">
-                {chatMessages.length === 0 && (
-                  <div className="text-center text-gray-500">
-                    <p>👋 Hello! I'm your AI eye health assistant. While I can't offer medical advice or diagnoses, I'm here to provide general information about eye health. How can I help you today? 😊</p>
-                  </div>
-                )}
-                {chatMessages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-lg ${
-                      message.role === 'user' ? 'bg-blue-100 ml-auto' : 'bg-white'
-                    } max-w-[80%] shadow`}
+              <div className="p-4 border-t border-gray-200 bg-blue-50">
+                <div className="flex items-center bg-white rounded-full shadow-md">
+                  <Input
+                    type="text"
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-grow p-3 bg-transparent focus:outline-none rounded-l-full text-lg"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    className="rounded-r-full bg-blue-600 hover:bg-blue-700"
                   >
-                    <p className={`text-sm ${message.role === 'user' ? 'text-blue-800' : 'text-gray-800'}`}>
-                      {message.content}
-                    </p>
-                  </div>
-                ))}
-                {isTyping && (
-                  <div className="bg-white p-3 rounded-lg max-w-[80%] shadow">
-                    <p className="text-gray-500">AI is typing... 🤔</p>
-                  </div>
-                )}
-                {error && (
-                  <div className="bg-red-100 p-3 rounded-lg max-w-[80%] shadow">
-                    <p className="text-red-500">{error}</p>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-              <div className="flex items-center bg-white rounded-full shadow-md">
-                <Input
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-grow p-3 bg-transparent focus:outline-none rounded-l-full"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  className="rounded-r-full bg-blue-600 hover:bg-blue-700"
-                >
-                  <Send size={20} />
-                </Button>
+                    <Send size={20} />
+                  </Button>
+                </div>
               </div>
               <Button
-                variant="outline"
-                onClick={() => setShowChatInterface(false)}
-                className="mt-4"
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseChat}
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
               >
-                Close Chat
+                <X size={24} />
               </Button>
             </motion.div>
           </motion.div>

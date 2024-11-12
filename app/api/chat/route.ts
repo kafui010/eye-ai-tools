@@ -16,14 +16,16 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" })
 
     const chat = model.startChat({
-      history: messages.map(msg => ({
-        role: msg.role,
+      history: messages.map((msg: { role: string; content: string }) => ({
+        role: msg.role === 'assistant' ? 'model' : msg.role,
         parts: [{ text: msg.content }],
       })),
       generationConfig: {
         maxOutputTokens: 1000,
       },
     })
+
+    const lastUserMessage = messages[messages.length - 1].content
 
     const prompt = `
       You are an AI assistant specializing in eye health. You have access to the following diagnosis:
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
       6. If asked about symptoms or conditions not related to eyes, politely redirect the conversation to eye health topics.
       7. Be empathetic and supportive in your responses.
       
-      User's message: ${messages[messages.length - 1].content}
+      User's message: ${lastUserMessage}
     `
 
     const result = await chat.sendMessage(prompt)
